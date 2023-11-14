@@ -6,27 +6,9 @@ const sqlite3 = require('sqlite3').verbose();
 const dbName = 'tasks.db';
 const db = new sqlite3.Database(dbName);
 
+require('./config/db');
 const port = 4000;
-
-let tasks = [
-  { id: 1, text: 'Go to Tree' },
-  { id: 2, text: 'Go to Vasa' },
-  { id: 3, text: 'Go to Book' },
-  { id: 4, text: 'Go to And' },
-  { id: 5, text: 'Go to Winston' },
-];
-
-const serverError = (err, res) => {
-  if (err) {
-    return res.status(500).json({ error: err.message });
-  }
-};
-
-const checkExist = (task, res) => {
-  if (!task) {
-    return res.status(404).json({ message: 'Task not found' });
-  }
-};
+const Task = require('./models/taskModel');
 
 app.use(bodyParser.json());
 
@@ -34,57 +16,90 @@ app.get('/', (req, res) => {
   res.send('Hello express');
 });
 
-app.get('/tasks', (req, res) => {
-  db.all('SELECT * FROM tasks', (err, rows) => {
-    serverError(err, res);
+app.get('/tasks', async (req, res) => {
+  try {
+    const tasks = await Task.find();
 
-    res.status(200).json(rows);
-  });
+    return res.status(200).json(tasks);
+  } catch (error) {
+    console.log('Task creation :>> ', error);
+    return res.status(500).json({ error: e.message });
+  }
 });
 
-app.post('/tasks', (req, res) => {
+app.get('/tasks/:id', async (req, res) => {
+  try {
+    const taskId = req.params.id;
+    const task = await Task.findById(taskId);
+
+    if (!task) {
+      return res.status(404).json({ message: err ?? 'Task not found' });
+    }
+
+    return res.status(200).json(task);
+  } catch (error) {
+    console.log('Task creation :>> ', error);
+    return res.status(500).json({ eor: err.message });
+  }
+});
+
+app.post('/tasks', async (req, res) => {
   // Get data from body
-  const newTask = req.body;
+  try {
+    const newTask = req.body;
 
-  // tasks.push(newTask);
-  db.run('INSERT INTO tasks (text) VALUES (?)', [newTask.text], (err) => {
-    serverError(err, res);
+    const task = await Task.create({
+      text: newTask.text,
+    });
 
-    return res.status(201).json({ id: this.lastId });
-  });
+    if (!task) {
+      return res.status(404).json({ message: 'Task not created' });
+    }
+
+    return res.status(201).json(task);
+  } catch (error) {
+    console.log('Task creation :>> ', error);
+    return res.status(500).json({ eor: err.message });
+  }
 });
 
-app.get('/tasks/:id', (req, res) => {
-  const taskId = parseInt(req.params.id);
-
-  db.get('SELECT * FROM tasks WHERE id = ?', taskId, (err, row) => {
-    serverError(err, res);
-    checkExist(row, res);
-
-    return res.status(200).json(row);
-  });
-});
-
-app.put('/tasks/:id', (req, res) => {
+app.put('/tasks/:id', async (req, res) => {
   // Get data from body
-  const { text } = req.body;
-  const taskId = parseInt(req.params.id);
+  try {
+    const { text, isCompleted } = req.body;
+    const taskId = req.params.id;
 
-  db.run('UPDATE tasks SET text = ? WHERE id = ?', [text, taskId], (err) => {
-    serverError(err, res);
+    const task = await Task.findByIdAndUpdate(
+      taskId,
+      { text, isCompleted },
+      { new: true }
+    );
+
+    if (!task) {
+      return res.status(404).json({ message: err ?? 'Task not found' });
+    }
 
     return res.status(200).json({ id: taskId, text });
-  });
+  } catch (error) {
+    console.log('Task creation :>> ', error);
+    return res.status(500).json({ eor: err.message });
+  }
 });
 
-app.delete('/tasks/:id', (req, res) => {
-  const taskId = parseInt(req.params.id);
+app.delete('/tasks/:id', async (req, res) => {
+  try {
+    const taskId = req.params.id;
+    const task = await Task.findByIdAndDelete(taskId);
 
-  db.run('DELETE FROM tasks WHERE id = ?', taskId, (err) => {
-    serverError(err, res);
+    if (!task) {
+      return res.status(404).json({ message: err ?? 'Task not found' });
+    }
 
     return res.status(204).send();
-  });
+  } catch (error) {
+    console.log('Task creation :>> ', error);
+    return res.status(500).json({ eor: err.message });
+  }
 });
 
 app.listen(port, () => {
