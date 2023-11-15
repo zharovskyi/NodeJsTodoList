@@ -1,71 +1,64 @@
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
+const bcrypt = require('bcrypt');
+const User = require('./models/userModel');
+const checkAuth = require('./middlware/checkAuth');
+const checkAdmin = require('./middlware/checkAdmin');
 
 const port = 4000;
 
-let tasks = [
-  { id: 1, text: 'Go to Tree' },
-  { id: 2, text: 'Go to Vasa' },
-  { id: 3, text: 'Go to Book' },
-  { id: 4, text: 'Go to And' },
-  { id: 5, text: 'Go to Winston' },
-];
+require('./config/db');
 
 app.use(bodyParser.json());
 
-app.get('/', (req, res) => {
-  res.send('Hello express');
-});
+app.post('/register', async (req, res) => {
+  try {
+    const { firstName, lastName, email, role, password: pass } = req.body;
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(pass, salt);
 
-app.get('/tasks', (req, res) => {
-  res.status(200).json(tasks);
-});
+    const user = await User.create({
+      firstName,
+      lastName,
+      email,
+      role,
+      password: hash,
+    });
 
-app.get('/tasks/:id', (req, res) => {
-  
-  const taskId = parseInt(req.params.id);
+    const { password, ...userData } = user._doc;
 
-  const foundTask = tasks.find((task) => task.id === taskId);
-
-  if (!foundTask) {
-    return res.status(404).json({ message: 'Task not found' });
+    return res.status(201).json(userData);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
   }
-
-  return res.status(200).json(foundTask);
 });
 
-app.post('/tasks', (req, res) => {
-  // Get data from body
-  const newTask = req.body;
+app.post('/login', async (req, res) => {
+  try {
+    const { email, password: pass } = req.body;
+    const user = await User.findOne({ email });
 
-  tasks.push(newTask);
+    if (!user) {
+      return res.status(404).json({ message: 'Not found' });
+    }
 
-  return res.status(201).json(newTask);
-});
+    const isValid = await bcrypt.compare(pass, user.password);
 
-app.put('/tasks/:id', (req, res) => {
-  // Get data from body
-  const updatedTask = req.body;
-  const taskId = parseInt(req.params.id);
+    if (!isValid) {
+      return res.status(404).json({ message: 'Invalid password or email' });
+    }
 
-  const foundTask = tasks.find((task) => task.id === taskId);
+    const { password, ...userData } = user._doc;
 
-  if (!foundTask) {
-    return res.status(404).json({ message: 'Task not found' });
+    return res.status(201).json(userData);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
   }
-
-  foundTask.text = updatedTask.text;
-
-  return res.status(200).json(foundTask);
 });
 
-app.delete('/tasks/:id', (req, res) => {
-  const taskId = parseInt(req.params.id);
-
-  tasks = tasks.filter((t) => t.id !== taskId);
-
-  return res.status(204).json(tasks);
+app.get('/test', checkAuth, checkAdmin, async (req, res) => {
+  return res.send('Test Works');
 });
 
 app.listen(port, () => {
