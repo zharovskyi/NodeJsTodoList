@@ -1,0 +1,7 @@
+.git/
+.gitignore
+build
+src/apps/home/static/
+src/**/media/
+docker/envs/.**
+env

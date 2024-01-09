@@ -1,7 +1,12 @@
 import Express from 'express';
 import BodyParser from 'body-parser';
+import swaggerUI from 'swagger-ui-express';
 import './config/db.js';
+
+//Routes
 import authRouter from './routes/authRoutes.js';
+import taskRouter from './routes/taskRoutes.js';
+import swaggerSpec from './config/swagger.js';
 
 const app = Express();
 
@@ -11,60 +16,9 @@ const port = 4000;
 
 app.use(BodyParser.json());
 
+app.use('/api/docs', swaggerUI.serve, swaggerUI.setup(swaggerSpec));
 app.use('/api', authRouter);
-
-// app.get('/', (req, res) => {
-//   res.send('Hello express');
-// });
-
-// app.get('/tasks', (req, res) => {
-//   res.status(200).json(tasks);
-// });
-
-// app.get('/tasks/:id', (req, res) => {
-//   const taskId = parseInt(req.params.id);
-
-//   const foundTask = tasks.find((task) => task.id === taskId);
-
-//   if (!foundTask) {
-//     return res.status(404).json({ message: 'Task not found' });
-//   }
-
-//   return res.status(200).json(foundTask);
-// });
-
-// app.post('/tasks', (req, res) => {
-//   // Get data from body
-//   const newTask = req.body;
-
-//   tasks.push(newTask);
-
-//   return res.status(201).json(newTask);
-// });
-
-// app.put('/tasks/:id', (req, res) => {
-//   // Get data from body
-//   const updatedTask = req.body;
-//   const taskId = parseInt(req.params.id);
-
-//   const foundTask = tasks.find((task) => task.id === taskId);
-
-//   if (!foundTask) {
-//     return res.status(404).json({ message: 'Task not found' });
-//   }
-
-//   foundTask.text = updatedTask.text;
-
-//   return res.status(200).json(foundTask);
-// });
-
-// app.delete('/tasks/:id', (req, res) => {
-//   const taskId = parseInt(req.params.id);
-
-//   tasks = tasks.filter((t) => t.id !== taskId);
-
-//   return res.status(204).json(tasks);
-// });
+app.use('/api', taskRouter);
 
 app.listen(port, () => {
   console.log(`Server run http://localhost:${port}`);
